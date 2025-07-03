@@ -6,22 +6,6 @@ import (
 	"net/http"
 )
 
-type APIResponse interface {
-	isAPIResponse()
-}
-
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
-func (e errorResponse) isAPIResponse() {}
-
-type successResponse struct {
-	Valid bool `json:"valid"`
-}
-
-func (s successResponse) isAPIResponse() {}
-
 func handlerChirpValidate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
@@ -31,43 +15,50 @@ func handlerChirpValidate(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		bodyData := "Something went wrong"
-		sendResponse(w, bodyData, 500)
+		msg := "Something went wrong"
+		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
 
 	chars := []rune(params.Body)
 	if len(chars) > 140 {
-		bodyData := "Chirp is too long"
-		sendResponse(w, bodyData, 400)
+		msg := "Chirp is too long"
+		respondWithError(w, http.StatusBadRequest, msg)
 		return
 	}
 
-	bodyData := true
-	sendResponse(w, bodyData, 200)
+	type successResponse struct {
+		Valid bool `json:"valid"`
+	}
+
+	payload := successResponse {
+		Valid: true,
+	}
+
+	respondWithJSON(w, http.StatusOK, payload)
 }
 
-func sendResponse(w http.ResponseWriter, bodyData interface{}, statusCode int) {
-	var respBody APIResponse
-
-	if statusCode >= 400 {
-		respBody = errorResponse{
-			Error: bodyData.(string),
-		}
-	} else {
-		respBody = successResponse{
-			Valid: bodyData.(bool),
-		}
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	type errorResponse struct {
+		Error string `json:"error"`
 	}
 
-	data, err := json.Marshal(respBody)
+	payload := errorResponse {
+		Error: msg,
+	}
+
+	respondWithJSON(w, code, payload)
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+
+	data, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
+		log.Printf("Error marshalling data: %s", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
 	w.Write(data)
 }
