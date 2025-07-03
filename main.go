@@ -28,11 +28,12 @@ func main() {
 		fileserverHits: atomic.Int32{},
 	}
 
-	defaultHandler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
-	mux.Handle("/app/", apiCfg.middlewareMetricsInc(defaultHandler))
-	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
-	mux.HandleFunc("/reset", apiCfg.handlerReset)
+	handlerDefault := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(handlerDefault))
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("POST /api/validate_chirp", handlerChirpValidate)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -44,7 +45,13 @@ func main() {
 }
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	count := fmt.Sprintf("Hits: %v", cfg.fileserverHits.Load())
-	w.Write([]byte(count))
+	w.Header().Set("Content-Type", "text/html")
+	htmlContent := fmt.Sprintf(`
+		<html>
+		<body>
+			<h1>Welcome, Chirpy Admin</h1>
+			<p>Chirpy has been visited %d times!</p>
+		</body>
+		</html>`, cfg.fileserverHits.Load())
+	w.Write([]byte(htmlContent))
 }
