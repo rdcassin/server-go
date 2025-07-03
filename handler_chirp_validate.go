@@ -4,11 +4,24 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
+
+const charLimit int = 140
+
+var profaneWords = map[string]struct{}{
+	"kerfuffle": {},
+	"sharbert":  {},
+	"fornax":    {},
+}
 
 func handlerChirpValidate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
+	}
+
+	type returnVals struct {
+		CleanedBody string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -20,19 +33,17 @@ func handlerChirpValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	params.Body = cleanChirp(params.Body)
+
 	chars := []rune(params.Body)
-	if len(chars) > 140 {
+	if len(chars) > charLimit {
 		msg := "Chirp is too long"
 		respondWithError(w, http.StatusBadRequest, msg)
 		return
 	}
 
-	type successResponse struct {
-		Valid bool `json:"valid"`
-	}
-
-	payload := successResponse {
-		Valid: true,
+	payload := returnVals{
+		CleanedBody: params.Body,
 	}
 
 	respondWithJSON(w, http.StatusOK, payload)
@@ -43,11 +54,27 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 		Error string `json:"error"`
 	}
 
-	payload := errorResponse {
+	payload := errorResponse{
 		Error: msg,
 	}
 
 	respondWithJSON(w, code, payload)
+}
+
+func cleanChirp(paramsBody string) string {
+	words := strings.Split(paramsBody, " ")
+
+	cleanBody := []string{}
+
+	for _, word := range words {
+		if _, exists := profaneWords[strings.ToLower(word)]; exists {
+			cleanBody = append(cleanBody, "****")
+		} else {
+			cleanBody = append(cleanBody, word)
+		}
+	}
+
+	return strings.Join(cleanBody, " ")
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
