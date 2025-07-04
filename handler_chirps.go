@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -28,7 +29,7 @@ type Chirp struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -42,13 +43,17 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Fatalf("Error decoding params: %s", err)
+		log.Printf("Error decoding params: %s", err)
 		msg := "Something went wrong"
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
 
-	params.Body = cleanChirp(w, params.Body)
+	params.Body, err = cleanChirp(w, params.Body)
+	if err != nil {
+		log.Printf("Error validating Chirp: %s", err)
+		return
+	}
 
 	newChirpParams := database.CreateChirpParams{
 		Body: params.Body,
@@ -57,7 +62,10 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 
 	newChirp, err := cfg.db.CreateChirp(r.Context(), newChirpParams)
 	if err != nil {
-		log.Fatalf("Error creating new chirp: %s", err)
+		log.Printf("Error creating new Chirp: %s", err)
+		msg := "Error creating new Chirp"
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
 	}
 
 	payload := returnVals{
@@ -73,18 +81,43 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, payload)
 }
 
-func validateChirp(w http.ResponseWriter, paramsBody string) string {
+func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
+
+	chirps, err := cfg.db.GetAllChirps(r.Context())
+	if err != nil {
+		log.Printf("Error fetching all Chirps: %s", err)
+	}
+
+	outputChirps := []Chirp{}
+
+	for _, chirp := range chirps {
+		outputChirp := Chirp {
+			ID: chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body: chirp.Body,
+			UserID: chirp.UserID,
+		}
+		outputChirps = append(outputChirps, outputChirp)
+	}
+
+	payload := outputChirps
+
+	respondWithJSON(w, http.StatusOK, payload)
+}
+
+func validateChirp(w http.ResponseWriter, paramsBody string) (string, error) {
 	chars := []rune(paramsBody)
 	if len(chars) > charLimit {
 		msg := "Chirp is too long"
 		respondWithError(w, http.StatusBadRequest, msg)
-		return ""
+		return "", errors.New("Chirp exceeds maximum character limit")
 	}
 
-	return paramsBody
+	return paramsBody, nil
 }
 
-func cleanChirp(w http.ResponseWriter, paramsBody string) string {
+func cleanChirp(w http.ResponseWriter, paramsBody string) (string, error) {
 	words := strings.Split(paramsBody, " ")
 
 	cleanBody := []string{}
