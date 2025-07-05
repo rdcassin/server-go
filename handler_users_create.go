@@ -1,12 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rdcassin/server-go/internal/auth"
+	"github.com/rdcassin/server-go/internal/database"
 )
 
 type User struct {
@@ -18,6 +21,7 @@ type User struct {
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
+		Password string `json:"password"`
 		Email string `json:"email"`
 	}
 
@@ -25,21 +29,34 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		User
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
+	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Printf("Error decoding params in handlerCreateUser: %s", err)
-		msg := "Something went wrong"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		log.Printf("Error decoding params in handlerUsersCreate: %s", err)
+		respondWithInternalServerError(w)
 		return
 	}
 
-	newUser, err := cfg.db.CreateUser(r.Context(), params.Email)
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		log.Printf("Error encrypting password in handlerUsersCreate")
+		respondWithInternalServerError(w)
+		return
+	}
+
+	newUserParams := database.CreateUserParams{
+		Email: params.Email,
+		HashedPassword: sql.NullString{
+			String: hashedPassword,
+			Valid: true,
+		},
+	}
+
+	newUser, err := cfg.db.CreateUser(r.Context(), newUserParams)
 	if err != nil {
 		log.Printf("Error creating new user: %s", err)
-		msg := "Error creating new user"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		respondWithInternalServerError(w)
 		return
 	}
 

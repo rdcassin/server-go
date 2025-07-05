@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -39,20 +39,19 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 		Chirp
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
+	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding params in handlerAddChirp: %s", err)
-		msg := "Something went wrong"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		respondWithInternalServerError(w)
 		return
 	}
 
 	params.Body, err = cleanChirp(w, params.Body)
 	if err != nil {
 		log.Printf("Error validating Chirp: %s", err)
-		msg := "Error validating Chirp"
+		msg := fmt.Sprint("%s", err)
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
@@ -65,8 +64,7 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	newChirp, err := cfg.db.CreateChirp(r.Context(), newChirpParams)
 	if err != nil {
 		log.Printf("Error creating new Chirp: %s", err)
-		msg := "Error creating new Chirp"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		respondWithInternalServerError(w)
 		return
 	}
 
@@ -86,9 +84,7 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 func validateChirp(w http.ResponseWriter, paramsBody string) (string, error) {
 	chars := []rune(paramsBody)
 	if len(chars) > charLimit {
-		msg := "Chirp is too long"
-		respondWithError(w, http.StatusBadRequest, msg)
-		return "", errors.New("Chirp exceeds maximum character limit")
+		return "", fmt.Errorf("Chirp exceeds maximum character limit")
 	}
 
 	return paramsBody, nil

@@ -15,8 +15,7 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 	chirps, err := cfg.db.GetAllChirps(r.Context())
 	if err != nil {
 		log.Printf("Error fetching all Chirps: %s", err)
-		msg := "Error fetching all Chirps"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		respondWithInternalServerError(w)
 		return
 	}
 
@@ -41,8 +40,7 @@ func (cfg *apiConfig) handlerFetchChirp(w http.ResponseWriter, r *http.Request) 
 	chirpID, err := uuid.Parse(rawChirpID)
 	if err != nil {
 		log.Printf("Error parsing Chirp ID %s: %s", rawChirpID, err)
-		msg := "Error parsing Chirp ID"
-		respondWithError(w, http.StatusInternalServerError, msg)
+		respondWithInternalServerError(w)
 		return
 	}
 
@@ -54,9 +52,8 @@ func (cfg *apiConfig) handlerFetchChirp(w http.ResponseWriter, r *http.Request) 
 			respondWithError(w, http.StatusNotFound, msg)
 			return
 		}
-		log.Printf("Error fetching Chirp with ID: %s: %s", chirpID, err)
-		msg := fmt.Sprintf("Error fetching Chirp with ID: %v", chirpID)
-		respondWithError(w, http.StatusInternalServerError, msg)
+		log.Printf("Error fetching Chirp in handlerFetchChirp with ID: %s: %s", chirpID, err)
+		respondWithInternalServerError(w)
 		return 
 	}
 
