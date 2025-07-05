@@ -43,7 +43,7 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Printf("Error decoding params: %s", err)
+		log.Printf("Error decoding params in handlerAddChirp: %s", err)
 		msg := "Something went wrong"
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
@@ -52,6 +52,8 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	params.Body, err = cleanChirp(w, params.Body)
 	if err != nil {
 		log.Printf("Error validating Chirp: %s", err)
+		msg := "Error validating Chirp"
+		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
 
@@ -79,31 +81,6 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	respondWithJSON(w, http.StatusCreated, payload)
-}
-
-func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
-
-	chirps, err := cfg.db.GetAllChirps(r.Context())
-	if err != nil {
-		log.Printf("Error fetching all Chirps: %s", err)
-	}
-
-	outputChirps := []Chirp{}
-
-	for _, chirp := range chirps {
-		outputChirp := Chirp {
-			ID: chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body: chirp.Body,
-			UserID: chirp.UserID,
-		}
-		outputChirps = append(outputChirps, outputChirp)
-	}
-
-	payload := outputChirps
-
-	respondWithJSON(w, http.StatusOK, payload)
 }
 
 func validateChirp(w http.ResponseWriter, paramsBody string) (string, error) {

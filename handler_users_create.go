@@ -16,7 +16,7 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email string `json:"email"`
 	}
@@ -29,7 +29,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Print("Error decoding params in handlerCreateUser: %s", err)
+		log.Printf("Error decoding params in handlerCreateUser: %s", err)
 		msg := "Something went wrong"
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
@@ -37,7 +37,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 
 	newUser, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
-		log.Print("Error creating new user: %s", err)
+		log.Printf("Error creating new user: %s", err)
 		msg := "Error creating new user"
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
