@@ -48,10 +48,10 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params.Body, err = cleanChirp(w, params.Body)
+	params.Body, err = cleanChirp(params.Body)
 	if err != nil {
 		log.Printf("Error validating Chirp: %s", err)
-		msg := fmt.Sprint("%s", err)
+		msg := fmt.Sprintf("%s", err)
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
@@ -81,7 +81,7 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, payload)
 }
 
-func validateChirp(w http.ResponseWriter, paramsBody string) (string, error) {
+func validateChirp(paramsBody string) (string, error) {
 	chars := []rune(paramsBody)
 	if len(chars) > charLimit {
 		return "", fmt.Errorf("Chirp exceeds maximum character limit")
@@ -90,7 +90,7 @@ func validateChirp(w http.ResponseWriter, paramsBody string) (string, error) {
 	return paramsBody, nil
 }
 
-func cleanChirp(w http.ResponseWriter, paramsBody string) (string, error) {
+func cleanChirp(paramsBody string) (string, error) {
 	words := strings.Split(paramsBody, " ")
 
 	cleanBody := []string{}
@@ -103,5 +103,5 @@ func cleanChirp(w http.ResponseWriter, paramsBody string) (string, error) {
 		}
 	}
 
-	return validateChirp(w, strings.Join(cleanBody, " "))
+	return validateChirp(strings.Join(cleanBody, " "))
 }
