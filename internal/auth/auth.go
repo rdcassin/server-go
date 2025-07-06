@@ -1,8 +1,12 @@
 package auth
 
 import (
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
+	"net/http"
+	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -66,4 +70,23 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authorization := headers.Get("Authorization")
+	if authorization == "" {
+		return "", fmt.Errorf("authorization missing")
+	}
+
+	authStrings := strings.Fields(authorization)
+	if len(authStrings) != 2 {
+		return "", fmt.Errorf("invalid authorization length")
+	}
+	if authStrings[0] != "Bearer" {
+		return "", fmt.Errorf("invalid format... authorization needs to start with 'Bearer'")
+	}
+
+	tokenString := authStrings[1]
+
+	return tokenString, nil
 }

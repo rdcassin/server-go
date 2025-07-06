@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rdcassin/server-go/internal/auth"
 	"github.com/rdcassin/server-go/internal/database"
 
 	"github.com/google/uuid"
@@ -22,26 +23,40 @@ var profaneWords = map[string]struct{}{
 }
 
 type Chirp struct {
-	ID uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Body string `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
 	}
 
 	type returnVals struct {
 		Chirp
 	}
 
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Printf("Error fetching bearer token in handlerAddChirp: %s", err)
+		respondWithInternalServerError(w)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, cfg.tokenSecret)
+	if err != nil {
+		log.Printf("Error validation token... unauthorized in handlerAddChirp: %s", err)
+		msg := "Unauthorized"
+		respondWithError(w, http.StatusUnauthorized, msg)
+		return
+	}
+
 	params := parameters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding params in handlerAddChirp: %s", err)
 		respondWithInternalServerError(w)
@@ -57,8 +72,8 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newChirpParams := database.CreateChirpParams{
-		Body: params.Body,
-		UserID: params.UserID,
+		Body:   params.Body,
+		UserID: userID,
 	}
 
 	newChirp, err := cfg.db.CreateChirp(r.Context(), newChirpParams)
@@ -70,14 +85,14 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 
 	payload := returnVals{
 		Chirp: Chirp{
-			ID: newChirp.ID,
+			ID:        newChirp.ID,
 			CreatedAt: newChirp.CreatedAt,
 			UpdatedAt: newChirp.UpdatedAt,
-			Body: newChirp.Body,
-			UserID: newChirp.UserID,
+			Body:      newChirp.Body,
+			UserID:    newChirp.UserID,
 		},
 	}
-	
+
 	respondWithJSON(w, http.StatusCreated, payload)
 }
 

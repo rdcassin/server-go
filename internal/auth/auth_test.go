@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -64,5 +66,79 @@ func TestValidateJWT_WrongSecret(t *testing.T) {
 	_, err = ValidateJWT(tokenString, wrongSecret)
 	if err == nil {
 		t.Error("Expected error for wrong secret, but got none")
+	}
+}
+
+func TestGetBearerToken_Success(t *testing.T) {
+	expectedTokenString := "abc"
+	authorization := fmt.Sprintf("Bearer %s", expectedTokenString)
+	header := http.Header{
+		"Authorization": []string{authorization},
+	}
+
+	// Extract tokenString
+	tokenString, err := GetBearerToken(header)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Check that the tokenString matches
+	if expectedTokenString != tokenString {
+		t.Errorf("Expected tokenString %v, got %v", expectedTokenString, tokenString)
+	}
+}
+
+func TestGetBearerToken_AuthorationFieldMissing(t *testing.T) {
+	header := http.Header{
+		"Foo": []string{"ABC"},
+		"Boots": []string{"Alcoholic Booze Hound", "Greatest Bear Mage"},
+	}
+
+	// Try to get tokenString
+	_, err := GetBearerToken(header)
+	if err == nil {
+		t.Fatalf("Expected error for authorization missing")
+	}
+}
+
+func TestGetBearerToken_AuthorizationTooLong(t *testing.T) {
+	expectedTokenString := "abc def"
+	authorization := fmt.Sprintf("Bearer %s", expectedTokenString)
+	header := http.Header{
+		"Authorization": []string{authorization},
+	}
+
+	// Try to get tokenString
+	_, err := GetBearerToken(header)
+	if err == nil {
+		t.Fatalf("Expected error for invalid authorization length")
+	}
+}
+
+func TestGetBearerToken_AuthorizationTooShort(t *testing.T) {
+	expectedTokenString := ""
+	authorization := fmt.Sprintf("Bearer %s", expectedTokenString)
+	header := http.Header{
+		"Authorization": []string{authorization},
+	}
+
+	// Try to get tokenString
+	_, err := GetBearerToken(header)
+	if err == nil {
+		t.Fatalf("Expected error for invalid authorization length")
+	}
+}
+
+func TestGetBearerToken_AuthorizationWrongFormat(t *testing.T) {
+	expectedTokenString := "totally great server"
+	authorization := fmt.Sprintf("Bearclaw %s", expectedTokenString)
+	header := http.Header{
+		"Authorization": []string{authorization},
+	}
+
+	// Try to get tokenString
+	_, err := GetBearerToken(header)
+	if err == nil {
+		t.Fatalf("Expected error for invalid format")
 	}
 }
