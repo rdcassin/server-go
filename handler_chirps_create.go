@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,24 +41,19 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	tokenString, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		log.Printf("Error fetching bearer token in handlerAddChirp: %s", err)
-		respondWithInternalServerError(w)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	userID, err := auth.ValidateJWT(tokenString, cfg.tokenSecret)
 	if err != nil {
 		log.Printf("Error validation token... unauthorized in handlerAddChirp: %s", err)
-		msg := "Unauthorized"
-		respondWithError(w, http.StatusUnauthorized, msg)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	params := parameters{}
-	decoder := json.NewDecoder(r.Body)
-	err = decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding params in handlerAddChirp: %s", err)
-		respondWithInternalServerError(w)
+	if !decodeJSONBody(w, r, &params) {
 		return
 	}
 
@@ -99,7 +93,7 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 func validateChirp(paramsBody string) (string, error) {
 	chars := []rune(paramsBody)
 	if len(chars) > charLimit {
-		return "", fmt.Errorf("Chirp exceeds maximum character limit")
+		return "", fmt.Errorf("chirp exceeds maximum character limit")
 	}
 
 	return paramsBody, nil

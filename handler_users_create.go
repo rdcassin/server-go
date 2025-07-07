@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -22,7 +21,7 @@ type User struct {
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
-		Email string `json:"email"`
+		Email    string `json:"email"`
 	}
 
 	type returnVals struct {
@@ -30,11 +29,7 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 	}
 
 	params := parameters{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding params in handlerUsersCreate: %s", err)
-		respondWithInternalServerError(w)
+	if !decodeJSONBody(w, r, &params) {
 		return
 	}
 
@@ -49,7 +44,7 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		Email: params.Email,
 		HashedPassword: sql.NullString{
 			String: hashedPassword,
-			Valid: true,
+			Valid:  true,
 		},
 	}
 
