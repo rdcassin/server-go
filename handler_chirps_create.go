@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/rdcassin/server-go/internal/database"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/rdcassin/server-go/internal/auth"
-	"github.com/rdcassin/server-go/internal/database"
 
 	"github.com/google/uuid"
 )
@@ -38,16 +36,8 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 		Chirp
 	}
 
-	tokenString, err := auth.GetBearerToken(r.Header)
+	userID, err := cfg.validateUser(r.Header)
 	if err != nil {
-		log.Printf("Error fetching bearer token in handlerAddChirp: %s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	userID, err := auth.ValidateJWT(tokenString, cfg.tokenSecret)
-	if err != nil {
-		log.Printf("Error validation token... unauthorized in handlerAddChirp: %s", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
