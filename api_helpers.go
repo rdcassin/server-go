@@ -1,12 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/rdcassin/server-go/internal/auth"
+	"github.com/rdcassin/server-go/internal/database"
 )
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, out interface{}) bool {
@@ -19,18 +21,23 @@ func decodeJSONBody(w http.ResponseWriter, r *http.Request, out interface{}) boo
 	return true
 }
 
-func (cfg *apiConfig) validateUser(header http.Header) (uuid.UUID, error) {
-	tokenString, err := auth.GetBearerToken(header)
+func (cfg *apiConfig) getChirp(r *http.Request) (database.Chirp, error) {
+	rawChirpID := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(rawChirpID)
 	if err != nil {
-		log.Printf("Error fetching bearer token in handlerAddChirp: %s", err)
-		return uuid.Nil, err
+		log.Printf("Error parsing Chirp ID %s: %s", rawChirpID, err)
+		return database.Chirp{}, err
 	}
 
-	userID, err := auth.ValidateJWT(tokenString, cfg.tokenSecret)
+	chirp, err := cfg.db.GetChirpByID(r.Context(), chirpID)
 	if err != nil {
-		log.Printf("Error validation token... unauthorized in handlerAddChirp: %s", err)
-		return uuid.Nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("Chirp with ID %s does not exist", chirpID)
+			return database.Chirp{}, err
+		}
+		log.Printf("Error fetching Chirp in handlerFetchChirp with ID: %s: %s", chirpID, err)
+		return database.Chirp{}, err
 	}
 
-	return userID, nil
+	return chirp, nil
 }

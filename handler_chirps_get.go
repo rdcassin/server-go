@@ -1,15 +1,9 @@
 package main
 
 import (
-	"database/sql"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/google/uuid"
 )
-
 
 func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.db.GetAllChirps(r.Context())
@@ -22,12 +16,12 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 	payload := []Chirp{}
 
 	for _, chirp := range chirps {
-		nextChirp := Chirp {
-			ID: chirp.ID,
+		nextChirp := Chirp{
+			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
-			Body: chirp.Body,
-			UserID: chirp.UserID,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
 		}
 		payload = append(payload, nextChirp)
 	}
@@ -35,34 +29,25 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, payload)
 }
 
-func (cfg *apiConfig) handlerFetchChirp(w http.ResponseWriter, r *http.Request) {	
-	rawChirpID := r.PathValue("chirpID")
-	chirpID, err := uuid.Parse(rawChirpID)
+func (cfg *apiConfig) handlerFetchChirp(w http.ResponseWriter, r *http.Request) {
+	type returnVals struct {
+		Chirp
+	}
+
+	chirp, err := cfg.getChirp(r)
 	if err != nil {
-		log.Printf("Error parsing Chirp ID %s: %s", rawChirpID, err)
-		respondWithInternalServerError(w)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	chirp, err := cfg.db.GetChirpByID(r.Context(), chirpID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Chirp with ID %s does not exist", chirpID)
-			msg := fmt.Sprintf("Chirp with ID %s does not exist", chirpID)
-			respondWithError(w, http.StatusNotFound, msg)
-			return
-		}
-		log.Printf("Error fetching Chirp in handlerFetchChirp with ID: %s: %s", chirpID, err)
-		respondWithInternalServerError(w)
-		return 
-	}
-
-	payload := Chirp{
-		ID: chirp.ID,
-		CreatedAt: chirp.CreatedAt,
-		UpdatedAt: chirp.UpdatedAt,
-		Body: chirp.Body,
-		UserID: chirp.UserID,
+	payload := returnVals{
+		Chirp: Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		},
 	}
 
 	respondWithJSON(w, http.StatusOK, payload)
