@@ -1,6 +1,7 @@
 -- +goose up
 ALTER TABLE users
-ADD COLUMN hashed_password TEXT DEFAULT 'unset';
+ADD COLUMN hashed_password
+TEXT DEFAULT 'unset';
 
 -- +goose down
 ALTER TABLE users

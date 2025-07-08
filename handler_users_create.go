@@ -2,21 +2,11 @@ package main
 
 import (
 	"database/sql"
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/google/uuid"
 	"github.com/rdcassin/server-go/internal/auth"
 	"github.com/rdcassin/server-go/internal/database"
+	"log"
+	"net/http"
 )
-
-type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-}
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -57,10 +47,11 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 
 	payload := returnVals{
 		User: User{
-			ID:        newUser.ID,
-			CreatedAt: newUser.CreatedAt,
-			UpdatedAt: newUser.UpdatedAt,
-			Email:     newUser.Email,
+			ID:          newUser.ID,
+			CreatedAt:   newUser.CreatedAt,
+			UpdatedAt:   newUser.UpdatedAt,
+			Email:       newUser.Email,
+			IsChirpyRed: newUser.IsChirpyRed,
 		},
 	}
 

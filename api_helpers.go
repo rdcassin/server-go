@@ -6,10 +6,19 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rdcassin/server-go/internal/database"
 )
+
+type User struct {
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
+}
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, out interface{}) bool {
 	decoder := json.NewDecoder(r.Body)
