@@ -60,7 +60,7 @@ func MakeRefreshToken() (string, error) {
 	}
 
 	hexToken := hex.EncodeToString(token)
-	
+
 	return hexToken, nil
 }
 
@@ -87,6 +87,14 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 }
 
 func GetBearerToken(headers http.Header) (string, error) {
+	return readAuth(headers, "Bearer")
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	return readAuth(headers, "ApiKey")
+}
+
+func readAuth(headers http.Header, format string) (string, error) {
 	authorization := headers.Get("Authorization")
 	if authorization == "" {
 		return "", fmt.Errorf("authorization missing")
@@ -96,11 +104,11 @@ func GetBearerToken(headers http.Header) (string, error) {
 	if len(authStrings) != 2 {
 		return "", fmt.Errorf("invalid authorization length")
 	}
-	if authStrings[0] != "Bearer" {
-		return "", fmt.Errorf("invalid format... authorization needs to start with 'Bearer'")
+	if authStrings[0] != format {
+		return "", fmt.Errorf("invalid format... authorization needs to start with %s", format)
 	}
 
-	tokenString := authStrings[1]
+	authString := authStrings[1]
 
-	return tokenString, nil
+	return authString, nil
 }

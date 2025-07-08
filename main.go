@@ -17,6 +17,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	tokenSecret    string
+	polkaKey       string
 }
 
 func main() {
@@ -40,6 +41,8 @@ func main() {
 		log.Fatal("Error fetching TOKEN_SECRET... TOKEN_SECRET must be set")
 	}
 
+	polkaKey := os.Getenv("POLKA_KEY")
+
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error establishing connection to database: %s", err)
@@ -51,6 +54,7 @@ func main() {
 		db:             dbQueries,
 		platform:       platform,
 		tokenSecret:    tokenSecret,
+		polkaKey:       polkaKey,
 	}
 
 	mux := http.NewServeMux()
